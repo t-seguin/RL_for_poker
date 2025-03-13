@@ -1,2 +1,0 @@
-class Deck(list):
-    pass
