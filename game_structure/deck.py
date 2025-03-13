@@ -14,7 +14,7 @@ class Deck(list):
 
         shuffle(self)
 
-    def pop(self):
+    def draw(self):
         """Remove and return the top card"""
         if len(self) > 0:
             return super().pop()
