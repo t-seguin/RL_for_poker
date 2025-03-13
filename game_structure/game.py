@@ -421,21 +421,26 @@ class Game:
             position_str = f"[{position_name}]" if position_name else ""
 
             status = "FOLDED" if player.folded else "ACTIVE"
-            cards = (
-                " ".join([str(card) for card in player.hand])
-                if player.hand
-                else "XX XX"
-            )
 
+            # Format cards with brackets and better spacing
+            if player.hand:
+                cards = f"[{str(player.hand[0])}] [{str(player.hand[1])}]"
+            else:
+                cards = "[XX] [XX]"
+
+            # Format player info with aligned columns
             player_str = (
-                f"{player.name} {position_str}: "
-                f"Chips: {player.chips} "
-                f"Cards: {cards} "
+                f"{player.name:<15} "  # Name left-aligned, 15 chars
+                f"{position_str:<6} "  # Position left-aligned, 6 chars
+                f"Chips: {player.chips:<6} "  # Chips left-aligned, 6 chars
+                f"Cards: {cards:<15} "  # Cards left-aligned, 15 chars
                 f"Status: {status}"
             )
 
             if player.position == self.current_player:
-                player_str = "-> " + player_str
+                player_str = f"-> {player_str:<{len(player_str)}}"
+            else:
+                player_str = f"   {player_str:<{len(player_str)}}"
             output.append(player_str)
 
         output.append(f"{'='*50}\n")

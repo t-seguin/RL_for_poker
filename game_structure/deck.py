@@ -30,10 +30,10 @@ class Card(tuple):
 
     # Mapping for string representation
     SUIT_NAMES = {
-        HEARTS: "hearts",
-        DIAMONDS: "diamonds",
-        CLUBS: "clubs",
-        SPADES: "spades",
+        HEARTS: "♥",
+        DIAMONDS: "♦",
+        CLUBS: "♣",
+        SPADES: "♠",
     }
 
     def __new__(cls, suit, rank):
@@ -55,9 +55,9 @@ class Card(tuple):
 
     def __str__(self):
         """String representation of the card"""
-        ranks = {11: "Jack", 12: "Queen", 13: "King", 14: "Ace"}
+        ranks = {11: "J", 12: "Q", 13: "K", 14: "A"}
         rank_str = ranks.get(self.rank, str(self.rank))
-        return f"{rank_str} of {self.SUIT_NAMES[self.suit]}"
+        return f"{rank_str}{self.SUIT_NAMES[self.suit]}"
 
     def __repr__(self):
         return self.__str__()
