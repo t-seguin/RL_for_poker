@@ -8,9 +8,7 @@ __pycache__/
 *.pyz
 *.pywz
 
-# Ignore everything in .history directory
-.history/
-**/.history/**
+.history/**
 
 
 *.pdf
