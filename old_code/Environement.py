@@ -48,7 +48,7 @@ class player():
 
 class table():
     #plusieurs joueurs, un pot, un board, un deck, le bouton
-    def __init__(self):
+    def __init__(self, nb_max_players=6):
         self.players = {}
         self.dealer = 0
         self.board = []
@@ -57,8 +57,11 @@ class table():
         self.nb_players=2
         self.players_bet = {}
         self.player_to_speak = self.get_first_to_talk()
+        self.__nb_max_players=nb_max_players
     
-    def add_players(self, players:list[player]):
+    def add_players(self, players:list[player] or player):
+        if type(players) != list:
+            players=[players]
         for i, p in enumerate(players):
             self.players[i] = p
             self.players_bet[i] = 0
@@ -106,6 +109,17 @@ class table():
         print('|')
         gap_length = 9 + board_length*self.player_to_speak//self.nb_players - self.player_to_speak
         print('|'+gap_length*' '+'^'+(board_length-gap_length-1)*' '+'|')
+        print('|     ', end='')
+        for i in range(self.nb_players):
+            if self.dealer == i:
+                print('Dealer'.center(10, ' ')+5*' ', end='')
+            elif self.dealer == i-1:
+                print('SB'.center(10, ' ')+5*' ', end='')
+            elif self.dealer == i-2:
+                print('BB'.center(10, ' ')+5*' ', end='')
+            else:
+                print(15*' ', end='')
+        print('|')
         print('+'+board_length*'-'+'+')
     
 
@@ -114,7 +128,10 @@ if __name__ == "__main__":
     P1 = player(name="Alice", chip_stack=200)
     P2 = player(name="Bob", chip_stack=200)
     P3 = player(name="Carl", chip_stack=100)
+    P4 = player(name="Dany", chip_stack=1000)
+    P5 = player(name="Emma", chip_stack=300)
+    P6 = player(name="Fernand", chip_stack=50)
     T = table()
-    T.add_players([P1, P2, P3, player()])
-    T.player_to_speak = 2
+    T.add_players([P1, P2, P3, P4, P5, P6])
+    T.player_to_speak = 1
     T.print_table()
