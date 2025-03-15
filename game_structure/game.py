@@ -65,8 +65,15 @@ class Table:
 
 
 class Game:
-    def __init__(self, table: Table, name: str = None):
+    def __init__(self, table: Table, name: str = None, pov: int = -1):
+        """Initialize a poker game
+
+        Args:
+            pov (int, optional): The point of view of the player of interest. If -1, the pov is
+                omniscient.
+        """
         self.table = table
+        self.pov = pov
         self.deck = Deck()
         self.board = []
         self.folded = []
@@ -112,7 +119,9 @@ class Game:
             status = "FOLDED" if player.folded else "ACTIVE"
 
             # Format cards with brackets and better spacing
-            if player.hand:
+            if not player.hand:
+                cards = ""
+            elif self.pov == -1 or player.position == self.pov:
                 cards = f"[{str(player.hand[0])+']':<4} [{str(player.hand[1])}]"
             else:
                 cards = "[XX] [XX]"
