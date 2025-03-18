@@ -1,14 +1,15 @@
 # Poker Application
-A sophisticated poker simulation application with reinforcement learning capabilities.
+This is an experimental project to explore reinforcement learning applied to poker game.
 
 ## TODO
 ### 1. Game structure : OOP to create game simulation, outputing files that contain the full game information (cf pgn for chess).
 
-#### 1.1 Create class `Game`
+#### 1.1 Create class `GameTexasHoldem`
 Create a class `Game` that has different attributes:
 
 **State Attributes:**
 - `board` which represent the cards on the table
+- `table` which represent the table with the players
 - `deck` which is the cards deck  
 - `folded` Which is the folded stack of cards
 - `players` that gives all the informations about the players (stack, cards, positions, ...)
@@ -16,6 +17,7 @@ Create a class `Game` that has different attributes:
 - `historic` that gives all the historic of previous rounds
 
 **Core Methods:**
+- `add_player(player)` : To add 
 - `play(player, action)` : Make the player play the action, modify inplace all the involved attributes. If impossible action, return an error.
 
 ### 2. Visualization
