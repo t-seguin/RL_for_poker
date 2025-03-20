@@ -4,7 +4,19 @@ This is an experimental project to explore reinforcement learning applied to pok
 ## TODO
 ### 1. Game structure : OOP to create game simulation, outputing files that contain the full game information (cf pgn for chess).
 
-#### 1.1 Create class `GameTexasHoldem`
+#### Key classes, attributes and methods :
+
+- `Game`: 
+    **Atrributes**
+    - `infos` (GameInfo): class containing all unsefull informations about the game : blinds, name, format, ...
+    - `table` (Table): class containing the players, 
+    - `deck` : cards deck
+    - `players` : 
+    - `parameters` : is the parameters of the game (blinds size, time, name, type, ...)
+    - `historic` that gives all the historic of previous rounds
+
+
+#### 1.1 Create class `Game`
 Create a class `Game` that has different attributes:
 
 **State Attributes:**
@@ -17,8 +29,9 @@ Create a class `Game` that has different attributes:
 - `historic` that gives all the historic of previous rounds
 
 **Core Methods:**
-- `add_player(player)` : To add 
+- `add/remove_player(player)` : To add or remove a player
 - `play(player, action)` : Make the player play the action, modify inplace all the involved attributes. If impossible action, return an error.
+- 
 
 ### 2. Visualization
 Create a visualization feature of the game (from a game file).

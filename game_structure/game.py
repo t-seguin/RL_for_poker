@@ -1,513 +1,363 @@
+from typing import List, Optional
 from .deck import Deck
 from .player import Player
+from .betting_round import BettingRound
+from .action import Action, ActionType
+from .game_state import GameState
+import time
 
 
-class Table:
-    def __init__(self):
-        self.players = []
-        self.dealer_position = 0  # Track dealer position
-        self.small_blind_position = 1  # Small blind is left of dealer
-        self.big_blind_position = 2  # Big blind is left of small blind
+class Game:
+    """Main game controller coordinating all components"""
+
+    def __init__(self, name: str = None, pov: int = -1):
+        """Initialize a poker game
+
+        Args:
+            name (str, optional): Name of the game
+            pov (int, optional): Point of view player position (-1 for omniscient)
+        """
+        self.name = name
+        self.pov = pov
+        self.deck = Deck()
+        self.players: List[Player] = []
+        self.dealer_position = 0
+        self.small_blind_position = 1  # TODO create a class that handle player position
+        self.big_blind_position = 2
+        self.current_round: Optional[BettingRound] = None
+        self.hand_number = 0
+        self.game_over = False
+        self.game_state = GameState()
+        self.parameter = {"small_blind": 1, "big_blind": 2}
 
     def add_player(self, player: Player):
-        """Add a player to the table"""
-        player.position = len(self.players)  # Assign position when adding player
+        """Add a player to the game"""
+        player.position = len(self.players)
         self.players.append(player)
 
+    def set_pov(self, player_name: str):
+        """Set the point of view player"""
+        self.pov = [p.name for p in self.players].index(player_name)
+
     def remove_player(self, player: Player):
-        """Remove a player from the table"""
+        """Remove a player from the game"""
         if player in self.players:
             removed_pos = player.position
             self.players.remove(player)
-            # Update positions of remaining players
             for p in self.players:
                 if p.position > removed_pos:
                     p.position -= 1
 
-    def get_first_to_act_preflop(self):
-        """Determine first player to act pre-flop based on number of players"""
-        num_players = len(self.players)
-        # Position after BB is first to act
-        return (self.big_blind_position + 1) % num_players
+    def start_new_hand(self):
+        """Initialize a new hand"""
+        self.hand_number += 1
+        self.deck = Deck()
+        self.deck.shuffle()
+        self._rotate_positions()
 
-    def rotate_positions(self):
+        # Reset player states
+        for player in self.players:
+            player.reset_hand()
+
+        # Initialize betting round before posting blinds
+        self.current_round = BettingRound(stage=0)
+        self.current_round.current_player_index = self._get_first_to_act()
+
+        # Post blinds
+        self._post_blinds()
+
+        # Update betting round with blinds
+        self.current_round.pot = (
+            self.parameter["small_blind"] + self.parameter["big_blind"]
+        )
+        self.current_round.current_bet = self.parameter["big_blind"]
+
+        # Deal cards
+        self._deal_cards()
+
+    def _rotate_positions(self):
         """Rotate dealer and blind positions after each hand"""
         num_players = len(self.players)
         self.dealer_position = (self.dealer_position + 1) % num_players
         self.small_blind_position = (self.small_blind_position + 1) % num_players
         self.big_blind_position = (self.big_blind_position + 1) % num_players
 
-    def get_position_name(self, position):
-        """Get the name of a position based on total players and position number"""
-        num_players = len(self.players)
+    def _post_blinds(self):
+        """Post small and big blinds"""
+        sb_player = self.players[self.small_blind_position]
+        bb_player = self.players[self.big_blind_position]
 
-        if position == self.dealer_position:
-            return "BTN"
-        elif position == self.small_blind_position:
-            return "SB"
-        elif position == self.big_blind_position:
-            return "BB"
+        # Post small blind
+        sb_amount = self.parameter["small_blind"]
+        sb_player.place_bet(sb_amount, blind_bet=True)
 
-        # Calculate positions between BB and BTN
-        positions_between = (self.dealer_position - position) % num_players
+        # Post big blind
+        bb_amount = self.parameter["big_blind"]
+        bb_player.place_bet(bb_amount, blind_bet=True)
 
-        if positions_between == 1:
-            return "CO"
-        elif positions_between == 2:
-            return "HJ"
-        elif positions_between == 3:
-            return "LJ"
-        elif position == (self.big_blind_position + 1) % num_players:
-            return "UTG"
-        else:
-            utg_plus = num_players - 3 - positions_between
-            return f"UTG+{utg_plus}"
-
-
-class Game:
-    def __init__(self, table: Table, name: str = None, pov: int = -1):
-        """Initialize a poker game
-
-        Args:
-            pov (int, optional): The point of view of the player of interest. If -1, the pov is
-                omniscient.
-        """
-        self.table = table
-        self.pov = pov
-        self.deck = Deck()
-        self.board = []
-        self.folded = []
-        self.parameter = {
-            "name": name,
-            "small_blind": 1,  # Default small blind amount
-            "big_blind": 2,  # Default big blind amount
-        }
-        self.historic = ""
-        self.current_player = -1
-        self.pot = 0
-        self.min_bet = 0
-        self.current_bet = 0
-        self.hand_number = 0  # Number of hands played
-        self.stage = 0  # 0=preflop, 1=flop, 2=turn, 3=river
-        self.game_over = False
-
-    def __str__(self):
-        """Return a string representation of the current game state"""
-        output = []
-
-        # Game info header
-        output.append(f"\n{'='*50}")
-        output.append(f"Game: {self.parameter['name']}")
-        output.append(f"Hand #: {self.hand_number}")
-        stage_names = ["Pre-flop", "Flop", "Turn", "River"]
-        output.append(f"Stage: {stage_names[self.stage]}")
-        output.append(f"Pot: {self.pot}")
-        output.append(f"Current Bet: {self.current_bet}")
-
-        # Board cards
-        board_str = (
-            " ".join([str(card) for card in self.board]) if self.board else "No cards"
-        )
-        output.append(f"\nBoard: {board_str}")
-
-        # Player information
-        output.append("\nPlayers:")
-        for player in self.table.players:
-            position_name = self.table.get_position_name(player.position)
-            position_str = f"[{position_name}]" if position_name else ""
-
-            status = "FOLDED" if player.folded else "ACTIVE"
-
-            # Format cards with brackets and better spacing
-            if not player.hand:
-                cards = ""
-            elif self.pov == -1 or player.position == self.pov:
-                cards = f"[{str(player.hand[0])+']':<4} [{str(player.hand[1])}]"
-            else:
-                cards = "[XX] [XX]"
-
-            # Format player info with aligned columns
-            player_str = (
-                f"{player.name:<15} "  # Name left-aligned, 15 chars
-                f"{position_str:<7} "  # Position left-aligned, 6 chars
-                f"Chips: {player.chips:<6} "  # Chips left-aligned, 6 chars
-                f"Cards: {cards:<12} "  # Cards left-aligned, 15 chars
-                f"Status: {status}"
-            )
-
-            if player.position == self.current_player:
-                player_str = f"-> {player_str:<{len(player_str)}}"
-            else:
-                player_str = f"   {player_str:<{len(player_str)}}"
-            output.append(player_str)
-
-        output.append(f"{'='*50}\n")
-        return "\n".join(output)
-
-    def __repr__(self):
-        return self.__str__()
+        self.current_round.set_current_bet(bb_amount)
 
     def _deal_cards(self):
-        """Deal initial cards to players and post blinds"""
-        self.deck.shuffle()  # Shuffle deck before dealing
+        """Deal cards to players"""
+        # Deal hole cards
+        for _ in range(2):
+            for player in self.players:
+                card = self.deck.draw()
+                player.hand.add_hole_card(card)
 
-        # Post blinds
-        small_blind_player = next(
-            p
-            for p in self.table.players
-            if p.position == self.table.small_blind_position
-        )
-        big_blind_player = next(
-            p for p in self.table.players if p.position == self.table.big_blind_position
-        )
+    def _get_first_to_act(self) -> int:
+        """Determine first player to act"""
+        if self.current_round.stage == 0:  # Pre-flop
+            return (self.big_blind_position + 1) % len(self.players)
+        return self.small_blind_position
 
-        # Take small blind
-        sb_amount = self.parameter["small_blind"]
-        small_blind_player.chips -= sb_amount
-        small_blind_player.current_bet = sb_amount
-        self.pot += sb_amount
+    def handle_action(self, player: Player, action: Action) -> bool:
+        """Handle a player's action
 
-        # Take big blind
-        bb_amount = self.parameter["big_blind"]
-        big_blind_player.chips -= bb_amount
-        big_blind_player.current_bet = bb_amount
-        self.pot += bb_amount
-        self.current_bet = bb_amount
+        Args:
+            player (Player): Player making the action
+            action (Action): Action to perform
 
-        # Start dealing from small blind position
-        current_pos = self.table.small_blind_position
-        for _ in range(len(self.table.players)):
-            player = next(p for p in self.table.players if p.position == current_pos)
-            player.hand = []
-            for _ in range(2):  # Assuming Texas Hold'em
-                if self.deck:
-                    player.hand.append(self.deck.pop())
-            current_pos = (current_pos + 1) % len(self.table.players)
+        Returns:
+            bool: True if action was successful
+        """
+        if not self._validate_action(player, action):
+            return False
 
-    def _deal_board(self, count=1):
-        """Deal cards to the board"""
-        for _ in range(count):
-            if self.deck:
-                self.board.append(self.deck.pop())
+        success = False
+        if action.type == ActionType.FOLD:
+            success = self._handle_fold(player)
+        elif action.type == ActionType.CHECK:
+            success = self._handle_check(player)
+        elif action.type == ActionType.CALL:
+            success = self._handle_call(player)
+        elif action.type == ActionType.RAISE:
+            success = self._handle_raise(player, action.amount)
+        else:
+            raise print(f"Invalid action type: {action.type}")
 
-    def _get_winners(self):
-        """Determine the winner(s) of the game"""
-        active_players = [p for p in self.table.players if p not in self.folded]
+        if success:
+            self._advance_game_state()
+
+        return success
+
+    def _validate_action(self, player: Player, action: Action) -> bool:
+        """Validate if an action is legal
+
+        Args:
+            player (Player): Player making the action
+            action (Action): Action to validate
+
+        Returns:
+            bool: True if action is valid
+        """
+        if player.position != self.current_round.current_player_index:
+            print(f"Not {player.name}'s turn to act")
+            return False
+
+        if player.folded:
+            print(f"Player {player.name} has already folded")
+            return False
+
+        if action.type == ActionType.RAISE:
+            if action.amount <= self.current_round.current_bet:
+                print("Raise amount must be greater than current bet")
+                return False
+            if action.amount > player.chips + player.current_bet:
+                print("Not enough chips to raise")
+                return False
+
+        return True
+
+    def _handle_fold(self, player: Player) -> bool:
+        """Handle fold action"""
+        player.fold()
+        self.game_state.add_to_history(f"{player.name} folds")
+        return True
+
+    def _handle_check(self, player: Player) -> bool:
+        """Handle check action"""
+        if self.current_round.current_bet > player.current_bet:
+            print("Cannot check when there is a bet to call")
+            return False
+        player.speak()
+        self.game_state.add_to_history(f"{player.name} checks")
+        return True
+
+    def _handle_call(self, player: Player) -> bool:
+        """Handle call action"""
+        amount_to_call = self.current_round.current_bet - player.current_bet
+        if not player.place_bet(amount_to_call):
+            return False
+        self.current_round.update_pot(amount_to_call)
+        self.game_state.add_to_history(f"{player.name} calls {amount_to_call}")
+        return True
+
+    def _handle_raise(self, player: Player, amount: int) -> bool:
+        """Handle raise action"""
+        if not player.place_bet(amount):
+            return False
+        self.current_round.update_pot(amount - player.current_bet)
+        self.current_round.set_current_bet(amount)
+        self.game_state.add_to_history(f"{player.name} raises to {amount}")
+        return True
+
+    def _advance_game_state(self):
+        """
+        Advance the game state based on current conditions. Either move to the next player,
+        advance the stage or end the hand
+        """
+        active_players = [p for p in self.players if not p.folded]
+
+        if len(active_players) == 1:
+            self._end_hand(active_players)
+
+        elif self.current_round.is_complete(self.players):
+            if self.current_round.stage < 3:
+                self._advance_stage()
+            else:
+                self._end_hand(self._determine_winners(active_players))
+        else:
+            self._get_next_player()
+
+    def _get_next_player(self):
+        """Get the next player to act"""
+        self.current_round.current_player_index = (
+            self.current_round.current_player_index + 1
+        ) % len(self.players)
+
+    def _advance_stage(self):
+        """Advance to the next stage of the game"""
+        self.current_round.next_stage()
+        for player in self.players:
+            player.new_stage()
+
+        # Deal community cards
+        if self.current_round.stage == 1:  # Flop
+            for _ in range(3):
+                card = self.deck.draw()
+                for player in self.players:
+                    player.hand.add_community_card(card)
+
+        elif self.current_round.stage in [2, 3]:  # Turn or River
+            card = self.deck.draw()
+            for player in self.players:
+                player.hand.add_community_card(card)
+
+        self.current_round.current_player_index = self._get_first_to_act()
+
+    def _determine_winners(self, active_players: List[Player]) -> List[Player]:
+        """Determine the winner(s) of the hand"""
         if len(active_players) == 1:
             return active_players
 
-        # Compare hands of active players
         best_hand = -1
         winners = []
+
         for player in active_players:
-            # Calculate hand value based on player's hole cards and board cards
-            hand_value = self._evaluate_hand(player.hand + self.board)
+            hand_value = player.hand.evaluate()
             if hand_value > best_hand:
                 best_hand = hand_value
                 winners = [player]
             elif hand_value == best_hand:
                 winners.append(player)
 
-        # Distribute pot to winners
-        self._distribute_pot(winners)
         return winners
 
-    def _distribute_pot(self, winners):
-        """Distribute the pot among winners"""
-        if winners:
-            split_amount = self.pot // len(winners)
-            for player in winners:
-                player.chips += split_amount
-            # Handle remainder chips if any
-            remainder = self.pot % len(winners)
-            if remainder > 0:
-                winners[0].chips += remainder
-            self.pot = 0
+    def _end_hand(self, winners: List[Player]) -> str:
+        """End the current hand and distribute pot"""
+        pot = sum(p.current_bet for p in self.players)
+        for winner in winners:
+            winner.chips += pot // len(winners)
 
-    def _evaluate_hand(self, hand):
-        """Evaluate a hand using a poker hand evaluator"""
-        # Sort cards by rank
-        sorted_hand = sorted(hand, key=lambda x: x.rank, reverse=True)
+        # TODO handle the case when a player is in all-in
+        message = f"{', '.join([winner.name for winner in winners])} win {pot//len(winners)} chips"
 
-        # Check for flush
-        suits = [card.suit for card in sorted_hand]
-        is_flush = len(set(suits)) == 1
+        self.game_state.add_to_history(message)
+        print(message)
+        self.game_over = True
 
-        # Check for straight
-        ranks = [card.rank for card in sorted_hand]
-        is_straight = False
-        for i in range(len(ranks) - 4):
-            if ranks[i] - ranks[i + 4] == 4:
-                is_straight = True
-                break
+        return message
 
-        # Count rank frequencies
-        rank_counts = {}
-        for rank in ranks:
-            rank_counts[rank] = rank_counts.get(rank, 0) + 1
+    def _update_game_state(self):
+        """Update the game state for display"""
+        community_cards = self.players[0].hand.community_cards if self.players else []
 
-        # Determine hand value
-        if is_straight and is_flush:
-            return 8000000 + max(ranks)  # Straight flush
-        elif 4 in rank_counts.values():
-            return 7000000 + max(
-                r for r, c in rank_counts.items() if c == 4
-            )  # Four of a kind
-        elif 3 in rank_counts.values() and 2 in rank_counts.values():
-            return 6000000 + max(
-                r for r, c in rank_counts.items() if c == 3
-            )  # Full house
-        elif is_flush:
-            return 5000000 + max(ranks)  # Flush
-        elif is_straight:
-            return 4000000 + max(ranks)  # Straight
-        elif 3 in rank_counts.values():
-            return 3000000 + max(
-                r for r, c in rank_counts.items() if c == 3
-            )  # Three of a kind
-        elif list(rank_counts.values()).count(2) == 2:
-            return 2000000 + max(
-                r for r, c in rank_counts.items() if c == 2
-            )  # Two pair
-        elif 2 in rank_counts.values():
-            return 1000000 + max(
-                r for r, c in rank_counts.items() if c == 2
-            )  # One pair
-        else:
-            return max(ranks)  # High card
-
-    def _validate_player_turn(self, player: Player) -> bool:
-        """Validate if it's the player's turn to act"""
-        if player.position != self.current_player:
-            print(f"Not {player.name}'s turn to act")
-            return False
-        if player.folded:
-            print(f"Player {player.name} has already folded")
-            return False
-        return True
-
-    def _validate_preflop_action(self, player_position: int) -> bool:
-        """Validate pre-flop specific rules"""
-        if self.stage == 0:
-            if (
-                player_position <= self.table.big_blind_position
-                and self.current_bet == 0
-            ):
-                print("Cannot act before big blind posts in pre-flop")
-                return False
-        return True
-
-    def _handle_fold(self, player: Player) -> bool:
-        """Handle fold action"""
-        player.folded = True
-        return True
-
-    def _handle_check(self, player: Player) -> bool:
-        """Handle check action"""
-        if self.current_bet == 0 or (
-            player.position == self.table.big_blind_position
-            and self.current_bet == player.current_bet
-        ):
-            return True
-        print(
-            f"Cannot check when there is a bet to call (current bet: {self.current_bet})"
+        self.game_state.update(
+            players=self.players,
+            community_cards=community_cards,
+            current_round=self.current_round,
+            dealer_position=self.dealer_position,
+            small_blind_position=self.small_blind_position,
+            big_blind_position=self.big_blind_position,
+            hand_number=self.hand_number,
+            game_over=self.game_over,
+            pov=self.pov,
         )
-        return False
 
-    def _handle_call(self, player: Player) -> bool:
-        """Handle call action"""
-        amount_to_call = self.current_bet - player.current_bet
-        if amount_to_call > player.chips:
-            print(
-                f"Not enough chips to call. Need {amount_to_call} but only has {player.chips}"
-            )
-            return False
-        player.chips -= amount_to_call
-        self.pot += amount_to_call
-        player.current_bet = self.current_bet
-        return True
+    def __str__(self):
+        """Return string representation of the game"""
+        self._update_game_state()
+        return str(self.game_state)
 
-    def _handle_raise(self, player: Player, raise_to_amount: int) -> bool:
-        """Handle raise action"""
-        min_raise = self.current_bet * 2
-        if self.stage == 0:  # Pre-flop
-            if player.position == self.table.small_blind_position:
-                min_raise = self.parameter.get("small_blind", 1)
-            elif player.position == self.table.big_blind_position:
-                min_raise = self.parameter.get("big_blind", 2)
-
-        if raise_to_amount < min_raise:
-            print(
-                f"Raise amount {raise_to_amount} is below minimum raise of {min_raise}"
-            )
-            return False
-        if raise_to_amount > player.chips + player.current_bet:
-            print(
-                f"Not enough chips to raise. Trying to raise to {raise_to_amount} but only has "
-                f"{player.chips + player.current_bet} total"
-            )
-            return False
-
-        amount_to_add = raise_to_amount - player.current_bet
-        player.chips -= amount_to_add
-        self.pot += amount_to_add
-        self.current_bet = raise_to_amount
-        player.current_bet = raise_to_amount
-        return True
-
-    def _should_advance_stage(self, active_players: list) -> bool:
-        """Determine if betting round is complete and stage should advance"""
-        all_bets_matched = all(
-            p.current_bet == self.current_bet for p in active_players
-        )
-        if not all_bets_matched:
-            return False
-
-        # All stages, the last player to speak has the right to act
-        if self.current_player == active_players[-1].position:
-            return False
-
-        # Pre-flop: big blind gets to act even if bets are matched
-        if self.stage == 0 and self.current_player == self.table.big_blind_position:
-            return False
-
-        # Post-flop: small blind gets to act even if bets are matched
-        if self.stage >= 1 and self.current_player == self.table.small_blind_position:
-            return False
-
-        return True
-
-    def _advance_stage(self):
-        """Handle advancing to next stage of the game"""
-        # Reset betting amounts
-        for p in self.table.players:
-            p.current_bet = 0
-        self.current_bet = 0
-
-        # Deal appropriate cards for each stage
-        if self.stage == 0:  # Pre-flop -> Flop
-            self.stage = 1
-            for _ in range(3):
-                self.board.append(self.deck.draw())
-        elif self.stage == 1:  # Flop -> Turn
-            self.stage = 2
-            self.board.append(self.deck.draw())
-        elif self.stage == 2:  # Turn -> River
-            self.stage = 3
-            self.board.append(self.deck.draw())
-        elif self.stage == 3:  # River -> End hand
-            self.finish_hand()
-
-        # Reset to first active player after dealer
-        next_position = (self.table.dealer_position + 1) % len(self.table.players)
-        while True:
-            if not self.table.players[next_position].folded:
-                self.current_player = next_position
-                break
-            next_position = (next_position + 1) % len(self.table.players)
-
-    def _move_to_next_active_player(self, current_position: int):
-        """Move to next non-folded player"""
-        next_position = (current_position + 1) % len(self.table.players)
-        while next_position != current_position:
-            if not self.table.players[next_position].folded:
-                self.current_player = next_position
-                break
-            next_position = (next_position + 1) % len(self.table.players)
-
-    def _get_current_player(self):
-        """Get the current player based on stage and position"""
-        if self.stage == 0:  # Pre-flop
-            return self.table.get_first_to_act_preflop()
-        else:
-            return self.table.small_blind_position
-
-    def start_game(self, rotate_positions=True):
-        """Initialize the game state"""
-        # Randomly rotate initial positions
-        import random
-
-        if rotate_positions:
-            random_rotation = random.randint(0, len(self.table.players) - 1)
-            for _ in range(random_rotation):
-                self.table.rotate_positions()
-
-        self.current_player = self._get_current_player()
-        self._deal_cards()
-
-    def play(self, player: Player, action: dict) -> bool:
-        """
-        Execute a player's action in the poker game.
+    def start_interactive_hand(self, debug_mode=False):
+        """Start an interactive game session
 
         Args:
-            player (Player): The player making the action
-            action (dict): Dictionary containing action type and amount
-                         {'type': 'fold'|'check'|'call'|'raise', 'amount': int}
-
-        Returns:
-            bool: True if action was valid and executed, False otherwise
+            debug_mode (bool): If True, allows controlling all players. If False, only controls POV
+                player.
         """
-        # Validate the action
-        if not self._validate_player_turn(player):
-            return False
+        print("\nStarting new poker hand...")
+        self.start_new_hand()
+        print(self)
 
-        if not self._validate_preflop_action(player.position):
-            return False
+        while not self.game_over:
+            current_player = next(
+                p
+                for p in self.players
+                if p.position == self.current_round.current_player_index
+            )
 
-        # Handle the action
-        action_type = action["type"].lower()
-        action_success = False
+            # Check if current player should be controlled by user
+            is_user_control = debug_mode or (
+                not debug_mode and current_player.position == self.pov
+            )
 
-        if action_type == "fold":
-            action_success = self._handle_fold(player)
-        elif action_type == "check":
-            action_success = self._handle_check(player)
-        elif action_type == "call":
-            action_success = self._handle_call(player)
-        elif action_type == "raise":
-            action_success = self._handle_raise(player, action["amount"])
-        else:
-            print(f"Invalid action type: {action_type}")
+            if is_user_control:
+                # Get user input for action
+                print(f"\n{current_player.name}'s turn")
+                print(f"Current bet: {self.current_round.current_bet}")
+                print(f"Your chips: {current_player.chips}")
+                print("Available actions: fold, check, call, raise")
 
-        # Handle progression if action was successful
-        if action_success:
-            active_players = [p for p in self.table.players if not p.folded]
-
-            if self._should_advance_stage(active_players):
-                self._advance_stage()
+                while True:
+                    action = Action(
+                        *input("Enter your action: ").lower().strip().split(" ")
+                    )
+                    success = self.handle_action(current_player, action)
+                    if success:
+                        print(action)
+                        break
+                    else:
+                        print("Action not allowed, try again")
             else:
-                self._move_to_next_active_player(player.position)
+                # Placeholder for AI/automatic player actions
+                print(f"\n{current_player.name} thinking...")
+                time.sleep(1)
+                action = current_player.get_action(self.current_round)
+                success = self.handle_action(current_player, action)
+                if success:
+                    print(action)
+                else:
+                    raise ValueError(f"Invalid action: {action}")
+                time.sleep(1)
 
-        return action_success
+            print(self)  # Show updated game state
 
-    def finish_hand(self):
-        """Distribute pot among winners and move to next hand"""
-        # Get winners and distribute pot
-        winners = self._get_winners()
-        self._distribute_pot(winners)
+            # Check if hand is over
+            if self.game_over:
+                break
 
-    def new_hand(self):
-        """Reset the hand state"""
-        self.current_bet = 0
-        self.min_bet = 0
-        self.folded = []
-        self.stage = 0  # Reset to pre-flop
-        self.hand_number += 1  # Increment hand count
-
-        # New hand
-        self.deck = Deck()  # New shuffled deck
-        self.board = []  # Clear board
-        self.pot = 0  # Reset pot
-
-        # Reset player states
-        for player in self.table.players:
-            player.folded = False
-            player.hand = []
-            player.current_bet = 0
-
-        self.table.rotate_positions()  # Rotate dealer
-
-        # Set current player based on stage and position
-        self.current_player = self._get_current_player()
-
-        self._deal_cards()  # Deal new hands and post blinds
+        print("\nHand complete!")
+        # TODO implement reveal phase
+        # TODO fix winners distribution message
