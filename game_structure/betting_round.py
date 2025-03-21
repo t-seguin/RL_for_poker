@@ -1,5 +1,7 @@
-from typing import List
-from .player import Player
+from typing import List, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .player import Player
 
 
 class BettingRound:
@@ -12,7 +14,7 @@ class BettingRound:
         self.pot = 0
         self.current_player_index = -1
 
-    def is_complete(self, players: List[Player]) -> bool:
+    def is_complete(self, players: List["Player"]) -> bool:
         """Check if betting round is complete
 
         Args:

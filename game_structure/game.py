@@ -202,6 +202,29 @@ class Game:
         self.game_state.add_to_history(f"{player.name} raises to {amount}")
         return True
 
+    def _handle_reveal(self, player: Player) -> bool:
+        """When the hand is over, reveal the player's hand if no other player has revealed a
+        stronger hand.
+
+        Args:
+            player (Player): Player revealing their hand
+
+        Returns:
+            bool: True if reveal was successful
+        """
+        hand_value = player.hand.evaluate()
+        revealed_players = [p for p in self.players if p.revealed]
+        if any(
+            hand_value < other_hand_value
+            for other_hand_value in [p.hand.evaluate() for p in revealed_players]
+        ):
+            return False
+        player.reveal()
+        self.game_state.add_to_history(
+            f"{player.name} reveals {player.hand} ({self.game_state._get_hand_name(hand_value)})"
+        )
+        return True
+
     def _advance_game_state(self):
         """
         Advance the game state based on current conditions. Either move to the next player,
@@ -266,6 +289,10 @@ class Game:
 
     def _end_hand(self, winners: List[Player]) -> str:
         """End the current hand and distribute pot"""
+        active_players = [p for p in self.players if not p.folded]
+        for player in active_players:
+            self._handle_reveal(player)
+
         pot = sum(p.current_bet for p in self.players)
         for winner in winners:
             winner.chips += pot // len(winners)
@@ -274,7 +301,6 @@ class Game:
         message = f"{', '.join([winner.name for winner in winners])} win {pot//len(winners)} chips"
 
         self.game_state.add_to_history(message)
-        print(message)
         self.game_over = True
 
         return message

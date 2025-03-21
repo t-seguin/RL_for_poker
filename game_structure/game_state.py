@@ -6,6 +6,18 @@ if TYPE_CHECKING:
     from .player import Player
     from .card import Card
 
+HAND_VALUE_NAME_MAPPING = {
+    8: "Straight Flush",
+    7: "Four of a Kind",
+    6: "Full House",
+    5: "Flush",
+    4: "Straight",
+    3: "Three of a Kind",
+    2: "Two Pair",
+    1: "One Pair",
+    0: "High Card",
+}
+
 
 class GameState:
     """Tracks the current state of the game for UI/display purposes"""
@@ -72,7 +84,7 @@ class GameState:
         Returns:
             str: Name of the current stage
         """
-        stage_names = ["Pre-flop", "Flop", "Turn", "River"]
+        stage_names = ["Pre-flop", "Flop", "Turn", "River", "Revealing"]
         return stage_names[self.current_round.stage]
 
     def get_position_name(self, position: int) -> str:
@@ -128,11 +140,18 @@ class GameState:
                 if player.position == self.current_round.current_player_index
                 else "   "
             )
-            player_cards = (
-                str(player.hand.hole_cards)
-                if i == self.pov or self.pov == -1
-                else "[XX, XX]"
-            )
+
+            # Handle card display based on stage and POV
+            if player.revealed:
+                player_cards = str(player.hand.hole_cards)
+                hand_name = self._get_hand_name(player.hand.evaluate())
+            elif i == self.pov or self.pov == -1:
+                player_cards = str(player.hand.hole_cards)
+                hand_name = None
+            else:
+                player_cards = "[XX, XX]"
+                hand_name = None
+
             player_str = (
                 f"{current_indicator}"
                 f"{player.name:<15} "
@@ -141,8 +160,20 @@ class GameState:
                 f"Chips: {player.chips:<6} "
                 f"Status: {status:<8} "
                 f"Spoke: {player.spoke}"
+                f"{f' ({hand_name})' if hand_name else ''}"
             )
             output.append(player_str)
 
         output.append(f"{'='*50}\n")
         return "\n".join(output)
+
+    def _get_hand_name(self, hand_value: int) -> str:
+        """Convert hand value to human-readable hand name
+
+        Args:
+            hand_value (int): Hand evaluation value
+
+        Returns:
+            str: Human-readable hand name
+        """
+        return HAND_VALUE_NAME_MAPPING[hand_value // 1000000]

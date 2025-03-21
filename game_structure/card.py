@@ -1,24 +1,25 @@
+RANKS = {
+    2: "2",
+    3: "3",
+    4: "4",
+    5: "5",
+    6: "6",
+    7: "7",
+    8: "8",
+    9: "9",
+    10: "T",
+    11: "J",
+    12: "Q",
+    13: "K",
+    14: "A",
+}
+SUITS = {0: "♥", 1: "♦", 2: "♣", 3: "♠"}
+
+
 class Card:
     """Represents a single playing card with rank and suit"""
 
-    RANKS = {
-        2: "2",
-        3: "3",
-        4: "4",
-        5: "5",
-        6: "6",
-        7: "7",
-        8: "8",
-        9: "9",
-        10: "T",
-        11: "J",
-        12: "Q",
-        13: "K",
-        14: "A",
-    }
-    SUITS = {"heart": "♥", "diamond": "♦", "club": "♣", "spade": "♠"}
-
-    def __init__(self, rank: int, suit: str):
+    def __init__(self, rank: int, suit: int):
         """Initialize a card with rank and suit
 
         Args:
@@ -30,7 +31,7 @@ class Card:
 
     def __str__(self):
         """Return string representation of the card"""
-        return f"{self.RANKS[self.rank]}{self.SUITS[self.suit]}"
+        return f"{RANKS[self.rank]}{SUITS[self.suit]}"
 
     def __repr__(self):
         return self.__str__()

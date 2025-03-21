@@ -18,6 +18,7 @@ class Player:
         self.current_bet = 0
         self.folded = False
         self.spoke = False
+        self.revealed = False
 
     def place_bet(self, amount: int, blind_bet: bool = False) -> bool:
         """Place a bet of the specified amount
@@ -49,6 +50,7 @@ class Player:
         self.folded = False
         self.is_active = True
         self.spoke = False
+        self.revealed = False
 
     def new_stage(self):
         """Reset the player's state for a new stage"""
@@ -58,6 +60,10 @@ class Player:
     def speak(self):
         """Set the player's spoke to True"""
         self.spoke = True
+
+    def reveal(self):
+        """Set the player's revealed to True"""
+        self.revealed = True
 
     def __str__(self):
         """Return string representation of the player"""
