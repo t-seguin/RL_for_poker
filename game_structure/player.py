@@ -19,6 +19,7 @@ class Player:
         self.folded = False
         self.spoke = False
         self.revealed = False
+        self.is_all_in = False
 
     def place_bet(self, amount: int, blind_bet: bool = False) -> bool:
         """Place a bet of the specified amount
@@ -29,12 +30,18 @@ class Player:
         Returns:
             bool: True if bet was successful, False otherwise
         """
-        if amount > self.chips:
+        if amount > self.chips or amount <= 0:
             return False
-        self.chips -= amount
-        self.current_bet += amount
+
+        elif amount == self.chips:
+            self.is_all_in = True
+
         if not blind_bet:
             self.spoke = True
+
+        self.chips -= amount
+        self.current_bet += amount
+
         return True
 
     def fold(self):
@@ -51,6 +58,7 @@ class Player:
         self.is_active = True
         self.spoke = False
         self.revealed = False
+        self.is_all_in = False
 
     def new_stage(self):
         """Reset the player's state for a new stage"""
@@ -64,6 +72,10 @@ class Player:
     def reveal(self):
         """Set the player's revealed to True"""
         self.revealed = True
+
+    def all_in(self):
+        """Set the player's all_in to True"""
+        self.is_all_in = True
 
     def __str__(self):
         """Return string representation of the player"""

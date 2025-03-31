@@ -36,6 +36,15 @@ Create a class `Game` that has different attributes:
 ### 2. Visualization
 Create a visualization feature of the game (from a game file).
 
+#### 2.1 Historic format : 
+The historic format will be the following :
+```
+    For an action line : [action #].[].[]
+    1.A.1.Ca
+    2.A.2.Ra.20
+    3.I.
+```
+
 ### 3. Implementation of RL for making player's strategy evolve
 
 **Neural Network Architecture**

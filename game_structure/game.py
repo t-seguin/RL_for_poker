@@ -160,7 +160,7 @@ class Game:
             return False
 
         if action.type == ActionType.RAISE:
-            if action.amount <= self.current_round.current_bet:
+            if action.amount <= self.current_round.current_bet and action.amount != -1:
                 print("Raise amount must be greater than current bet")
                 return False
             if action.amount > player.chips + player.current_bet:
@@ -170,13 +170,13 @@ class Game:
         return True
 
     def _handle_fold(self, player: Player) -> bool:
-        """Handle fold action"""
+        """Handle fold action, return False if the player cannot fold and True if success"""
         player.fold()
         self.game_state.add_to_history(f"{player.name} folds")
         return True
 
     def _handle_check(self, player: Player) -> bool:
-        """Handle check action"""
+        """Handle check action, return False if the player cannot check and True if success"""
         if self.current_round.current_bet > player.current_bet:
             print("Cannot check when there is a bet to call")
             return False
@@ -185,21 +185,43 @@ class Game:
         return True
 
     def _handle_call(self, player: Player) -> bool:
-        """Handle call action"""
+        """Handle call action, return False if the player cannot call and True if success"""
         amount_to_call = self.current_round.current_bet - player.current_bet
-        if not player.place_bet(amount_to_call):
+
+        if amount_to_call > player.chips:
+            amount_to_call = player.chips
+
+        if (
+            not self.current_round.current_bet > player.current_bet
+            or not player.place_bet(amount_to_call)
+        ):
             return False
+
         self.current_round.update_pot(amount_to_call)
         self.game_state.add_to_history(f"{player.name} calls {amount_to_call}")
         return True
 
     def _handle_raise(self, player: Player, amount: int) -> bool:
-        """Handle raise action"""
+        """Handle raise action, return False if the player cannot raise and True if success
+
+        Args:
+            player (Player): Player making the raise
+            amount (int): Amount to raise. If = -1, the player raise to all-in
+
+        Returns:
+            bool: True if raise was successful
+        """
+        if amount == -1:
+            amount = player.chips
+
         if not player.place_bet(amount):
             return False
-        self.current_round.update_pot(amount - player.current_bet)
-        self.current_round.set_current_bet(amount)
-        self.game_state.add_to_history(f"{player.name} raises to {amount}")
+
+        self.current_round.update_pot(
+            player.current_bet - self.current_round.current_bet
+        )
+        self.current_round.set_current_bet(player.current_bet)
+        self.game_state.add_to_history(f"{player.name} raises to {player.current_bet}")
         return True
 
     def _handle_reveal(self, player: Player) -> bool:
@@ -293,7 +315,7 @@ class Game:
         for player in active_players:
             self._handle_reveal(player)
 
-        pot = sum(p.current_bet for p in self.players)
+        pot = self.current_round.pot
         for winner in winners:
             winner.chips += pot // len(winners)
 
@@ -385,5 +407,6 @@ class Game:
                 break
 
         print("\nHand complete!")
-        # TODO implement reveal phase
+        with open("historic.txt", "w") as f:
+            f.write(self.game_state.historic)
         # TODO fix winners distribution message

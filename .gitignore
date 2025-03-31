@@ -43,7 +43,7 @@ wheels/
 *.pyw
 *.pyz
 *.pywz
+*.ipynb
 
 .history/**
-
 

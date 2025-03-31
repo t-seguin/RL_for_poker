@@ -33,7 +33,20 @@ class Action:
             self.type = action_type
 
         if isinstance(amount, str):
-            amount = int(amount)
+            amount = (
+                amount.lower()
+                .strip()
+                .replace(" ", "")
+                .replace("-", "")
+                .replace("_", "")
+            )
+            if amount == "allin":
+                amount = -1
+            else:
+                try:
+                    amount = int(amount)
+                except Exception:
+                    raise ValueError(f"wrong amount value : {amount}")
 
         self.amount = amount
 
