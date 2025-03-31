@@ -1,7 +1,6 @@
 # Poker Application
 This is an experimental project to explore reinforcement learning applied to poker game.
 
-## TODO
 ### 1. Game structure : OOP to create game simulation, outputing files that contain the full game information (cf pgn for chess).
 
 #### Key classes, attributes and methods :
@@ -39,10 +38,45 @@ Create a visualization feature of the game (from a game file).
 #### 2.1 Historic format : 
 The historic format will be the following :
 ```
-    For an action line : [action #].[].[]
-    1.A.1.Ca
-    2.A.2.Ra.20
-    3.I.
+    Stage number :
+        0: pre-flop
+        1: flop
+        2: turn
+        3: river 
+
+    Object format :
+        B: board
+        P*: player *
+
+    Possible actions :
+        cl: call
+        ch: check
+        fd: fold
+        rs: raise
+        wn: win
+        rv: reveal
+
+    Historic format : 
+        Informal part
+        
+        [StageNum]. [Object].[Action].[Value]
+
+    Example of historic for one hand :
+
+    [Hand# 1]
+    [BigBlind 4]
+    [Players]
+        [P1 "michel"]
+        [P2 "alice"]
+    [Positions] 
+        [BB P2]
+        [SB P1]
+    [Chips]
+        [P1 100]
+        [P2 100]
+    [Termination "P2 wins 60"]
+
+    0. P1.cl P2.rs.20 P1.cl B.rv.Q♥ B.rv.4♥ B.rv.K♣ 1. P1.ch P2.rs.20 P1.fd P2.wn.60
 ```
 
 ### 3. Implementation of RL for making player's strategy evolve

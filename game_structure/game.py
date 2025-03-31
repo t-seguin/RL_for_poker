@@ -409,4 +409,3 @@ class Game:
         print("\nHand complete!")
         with open("historic.txt", "w") as f:
             f.write(self.game_state.historic)
-        # TODO fix winners distribution message
