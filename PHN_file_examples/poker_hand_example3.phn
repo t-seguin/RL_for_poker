@@ -1,0 +1,18 @@
+[GameName "Los Vegos Tournament"]
+[Hand# 3]
+[BigBlind 100]
+[Players# 3]
+[BB P1]
+[SB P3]
+[InitialStacks (1500, 1000, 150)]
+[EndStacks (2550, 0, 100)]
+[Pov "P2"]
+[WinningHand "Two pair"]
+
+P1_15 P2_10_4hQc P3_1.5
+0. P3_bt_0.5 P1_bt_1 P2_cl P3_fd P1_ch|B_As5h7d|P_2.5 
+1. P1_bt_3 P2_cl|B_Kc|P_8.5
+2. P1_ch P2_bt_ai P1_cl|B_2d|P_20.5
+3. ||P_20.5
+4. P2_rv_4hQc P1_rv_Kd5c||
+P1_25.5_Kd5c P2_0_4hQc P3_1

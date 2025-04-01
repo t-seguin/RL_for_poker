@@ -1,0 +1,16 @@
+[GameName "Sunday tournament"]
+[Hand# 1]
+[BigBlind 4]
+[Players# 2]
+[BB P2]
+[SB P1]
+[InitialStacks (100, 100)]
+[EndStacks (76, 124)]
+[Pov "Spectator"]
+[WinningHand ""]
+
+
+P1_25 P2_25 
+0. P1_bt_0.5 P2_bt_1 P1_cl P2_rs_5 P1_cl|B_Qh4hKc|P_12
+1. P1_ch P2_bt_5 P1_fd||P_12
+P1_19 P2_31

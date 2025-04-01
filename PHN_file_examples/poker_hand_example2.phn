@@ -1,0 +1,18 @@
+[GameName "Las Vegas Tournament"]
+[Hand# 3]
+[BigBlind 100]
+[Players# 3]
+[BB P1]
+[SB P3]
+[InitialStacks (1500, 1000, 150)]
+[EndStacks (2450, 100, 100)]
+[Pov "P2"]
+[WinningHand "Two pair"]
+
+P1_15 P2_10_4hQc P3_1.5
+0. P3_bt_0.5 P1_bt_1 P2_cl P3_fd P1_ch|B_As5h7d|P_2.5 
+1. P1_bt_3 P2_cl|B_Kc|P_8.5
+2. P1_bt_5 P2_cl|B_2d|P_18.5
+3. P1_ch P2_ch||P_18.5
+4. P1_rv_Kd5c P2_hd||
+P1_24.5_Kd5c P2_1_4hQc P3_1
