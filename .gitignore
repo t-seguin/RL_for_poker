@@ -29,14 +29,10 @@ wheels/
 .vscode/
 *.swp
 *.swo
-.history/
 
 # Misc
 *.txt
 *.pdf
-.DS_Store
-
-*.txt
 *.pyc
 *.pyo
 *.pyd
@@ -44,6 +40,13 @@ wheels/
 *.pyz
 *.pywz
 *.ipynb
+*.pgn
 
+# History folder
+.history/
 .history/**
+
+# Local files
+local/
+local/**
 
