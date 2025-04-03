@@ -14,16 +14,15 @@ class BettingRound:
         self.pot = 0
         self.current_player_index = -1
 
-    def is_complete(self, players: List["Player"]) -> bool:
-        """Check if betting round is complete
+    def is_completed(self, active_players: List["Player"]) -> bool:
+        """Check if betting round is completed
 
         Args:
             active_players (List[Player]): List of players who haven't folded
 
         Returns:
-            bool: True if betting round is complete
+            bool: True if betting round is completed
         """
-        active_players = [p for p in players if not p.folded]
         if len(active_players) == 1:
             return True
 
@@ -72,5 +71,6 @@ class BettingRound:
     def next_stage(self):
         """Advance to the next stage of the betting round"""
         self.stage += 1
+        assert self.stage <= 4, "Stage cannot be more than 4"
         self.current_bet = 0
         self.min_bet = 0

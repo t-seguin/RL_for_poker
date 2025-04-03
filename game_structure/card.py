@@ -29,6 +29,11 @@ class Card:
         self.rank = rank
         self.suit = suit
 
+    def to_phn(self) -> str:
+        """Return the card representation in phn format"""
+        MAPPING_SUITS_PHN = {0: "h", 1: "d", 2: "c", 3: "s"}
+        return f"{RANKS[self.rank]}{MAPPING_SUITS_PHN[self.suit]}"
+
     def __str__(self):
         """Return string representation of the card"""
         return f"{RANKS[self.rank]}{SUITS[self.suit]}"

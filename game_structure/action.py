@@ -5,23 +5,30 @@ from typing import Optional
 class ActionType(Enum):
     """Enumeration of possible poker actions"""
 
+    BET = "bet"
     FOLD = "fold"
     CHECK = "check"
     CALL = "call"
     RAISE = "raise"
+    REVEAL = "reveal"
+    HIDE = "hide"
 
 
 class Action:
     """Represents a player action (fold, check, call, raise)"""
 
     def __init__(
-        self, action_type: str | ActionType, amount: Optional[int | str] = None
+        self,
+        action_type: str | ActionType,
+        amount: Optional[int | str] = None,
+        blind_posting: bool = False,
     ):
         """Initialize an action
 
         Args:
             action_type (str | ActionType): Type of action as string or ActionType
             amount (Optional[int]): Amount for raise actions
+            blind_posting (bool): To set to True if the action is about posting the blind
         """
         # Convert string to ActionType if needed
         if isinstance(action_type, str):
@@ -51,10 +58,15 @@ class Action:
         self.amount = amount
 
         # Validate action
-        if self.type == ActionType.RAISE and amount is None:
-            raise ValueError("Raise action requires an amount")
-        if self.type != ActionType.RAISE and amount is not None:
-            raise ValueError("Amount should only be specified for raise actions")
+        if (
+            self.type == ActionType.RAISE or self.type == ActionType.BET
+        ) and amount is None:
+            raise ValueError("Raise or Bet action requires an amount")
+
+        if (self.type not in [ActionType.RAISE, ActionType.BET]) and amount is not None:
+            raise ValueError(f"{self.type} action should not have an amount")
+
+        self.blind_posting = blind_posting
 
     @classmethod
     def from_string(cls, action_str: str) -> "Action":
@@ -86,6 +98,29 @@ class Action:
                 raise ValueError("Invalid raise amount")
         else:
             return cls(ActionType(action_type))
+
+    def to_phn(self) -> str:
+        """Convert action to phn format"""
+        phn_action_mapping = {
+            ActionType.BET: "bt",
+            ActionType.FOLD: "fd",
+            ActionType.CHECK: "ch",
+            ActionType.CALL: "cl",
+            ActionType.RAISE: "rs",
+            ActionType.REVEAL: "rv",
+            ActionType.HIDE: "hd",
+        }
+        if not self.blind_posting:
+            phn = phn_action_mapping[self.type]
+            if self.amount:
+                phn += f"_{self.amount}"
+        else:
+            if self.type == ActionType.BET:
+                return "sb"
+            else:
+                return "bb"
+
+        return phn
 
     def __str__(self):
         """Return string representation of the action"""

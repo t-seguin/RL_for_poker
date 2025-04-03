@@ -16,10 +16,12 @@ class Hand:
         else:
             raise ValueError("Cannot add more than 2 hole cards")
 
-    def add_community_card(self, card: Card):
+    def add_community_card(self, cards: Card | list[Card]):
         """Add a community card to the hand"""
-        if len(self.community_cards) < 5:
-            self.community_cards.append(card)
+        if isinstance(cards, Card):
+            cards = [cards]
+        if len(self.community_cards) + len(cards) <= 5:
+            self.community_cards += cards
         else:
             raise ValueError("Cannot add more than 5 community cards")
 

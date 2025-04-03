@@ -1,4 +1,8 @@
 from .card import Card
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .player import Player
 
 
 class Deck(list):
@@ -17,8 +21,24 @@ class Deck(list):
 
         shuffle(self)
 
-    def draw(self):
+    def _draw(self):
         """Remove and return the top card"""
         if len(self) > 0:
             return super().pop()
         return None
+
+    def deal_cards(self, players: list["Player"]):
+        """Deal cards to players"""
+        for _ in range(2):
+            for player in players:
+                card = self._draw()
+                player.hand.add_hole_card(card)
+
+    def draw_flop(self) -> list[Card]:
+        drawn_cards = []
+        for _ in range(3):
+            drawn_cards.append(self._draw())
+        return drawn_cards
+
+    def draw_turn_or_river(self) -> list[Card]:
+        return [self._draw()]

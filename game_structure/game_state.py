@@ -76,7 +76,7 @@ class GameState:
         Args:
             action_str (str): String representation of the action
         """
-        self.historic += f"{action_str}\n"
+        self.historic += action_str
 
     def get_stage_name(self) -> str:
         """Get the name of the current stage
@@ -84,7 +84,7 @@ class GameState:
         Returns:
             str: Name of the current stage
         """
-        stage_names = ["Pre-flop", "Flop", "Turn", "River", "Revealing"]
+        stage_names = ["Pre-flop", "Flop", "Turn", "River", "Show-down"]
         return stage_names[self.current_round.stage]
 
     def get_position_name(self, position: int) -> str:
